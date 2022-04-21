@@ -1,10 +1,10 @@
-import { useState } from 'react'
-import logo from './logo.svg'
+import { useState, useEffect } from 'react'
 import styles from './App.module.less'
 
 function App() {
-  const [count, setCount] = useState(0)
-
+  const [count, setCount] = useState("")
+  useEffect(() => { 
+  }, [])
   return (
     <div className={styles.app}>
 
