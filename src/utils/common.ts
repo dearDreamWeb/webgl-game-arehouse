@@ -5,7 +5,7 @@
  * @param {*} FSHADER_SOURCE  片元着色器GLSL代码
  * @returns 
  */
-export function initShaders(gl:WebGLRenderingContext, VSHADER_SOURCE:string, FSHADER_SOURCE:string) {
+export function initShaders(gl: WebGLRenderingContext, VSHADER_SOURCE: string, FSHADER_SOURCE: string) {
     // 创建顶点着色器
     const vShader = gl.createShader(gl.VERTEX_SHADER)!;
     // 向顶点着色器中添加GLSL程序代码
@@ -48,5 +48,28 @@ export function initShaders(gl:WebGLRenderingContext, VSHADER_SOURCE:string, FSH
         gl.useProgram(program) // 告诉 WebGL 用这个 program 进行渲染
     }
 
-    return flag;
+    return program;
+}
+
+/**
+ * 取随机数
+ * @param min 
+ * @param max 
+ * @returns 
+ */
+export function rand(min: number, max: number) {
+    return Math.random() * (max - min) + min;
+}
+
+/**
+ * 归一化坐标
+ * @param param0 
+ */
+export function normalization({ x, y }: { x: number; y: number }) {
+    const canvasDom = document.querySelector('#canvasDom');
+    const { x: domX, y: domY, width, height } = canvasDom!.getBoundingClientRect()
+    return {
+        x: (x - domX - width / 2) / (width / 2),
+        y: (y - domY - height / 2) / (height / 2)
+    }
 }
