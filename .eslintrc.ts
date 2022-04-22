@@ -6,31 +6,7 @@ module.exports = {
     "extends": [
         "eslint:recommended",
         "plugin:react/recommended",
-        "plugin:@typescript-eslint/recommended"
-    ],
-    "parser": "@typescript-eslint/parser",
-    "parserOptions": {
-        "ecmaFeatures": {
-            "jsx": true
-        },
-        "ecmaVersion": "latest",
-        "sourceType": "module"
-    },
-    "plugins": [
-        "react",
-        "@typescript-eslint"
-    ],
-    "rules": {
-    },
-    "plugins": [
-        "react-hooks"
-    ],
-    "rules": {
-        "react-hooks/rules-of-hooks": "error",
-        "react-hooks/exhaustive-deps": "warn"
-    },
-
-    extends: [
+        "plugin:@typescript-eslint/recommended",
         // react
         // - 删除  eslint:recommended 
         'plugin:react/recommended',
@@ -42,10 +18,24 @@ module.exports = {
         // 解决 eslint 和 prettier 的冲突 , 此项配置必须在最后
         'prettier',
     ],
-    parserOptions: {
+    "parser": "@typescript-eslint/parser",
+    "parserOptions": {
+        "ecmaFeatures": {
+            "jsx": true
+        },
+        "ecmaVersion": "latest",
+        "sourceType": "module",
         project: './tsconfig.json', // + 新增 parserOptions 配置
     },
-    rules: {
+    "plugins": [
+        "react",
+        "@typescript-eslint",
+        "react-hooks"
+    ],
+    "rules": {
+        "react-hooks/rules-of-hooks": "error",
+        "react-hooks/exhaustive-deps": "warn",
+        "import/prefer-default-export": "off",
         // 覆盖 eslint-config-airbnb里的配置
         //  允许 在ts、tsx 中书写 jsx
         'react/jsx-filename-extension': [
