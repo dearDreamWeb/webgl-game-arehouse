@@ -4,12 +4,18 @@ import { initShaders, rand, normalization } from '@/utils/common'
 
 function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [pointCount] = useState(2000)
+  const [pointCount] = useState(2000);
+  const [dataArr, setDataArr] = useState<Float32Array>()
+  const [gl, setGl] = useState<WebGLRenderingContext>()
+  const [program, setProgram] = useState<WebGLProgram>()
+  const mousePosition = useRef({ x: 0, y: 0 })
 
   useEffect(() => {
     init();
     if (canvasRef.current) {
+      canvasRef.current.onmousemove = null;
       canvasRef.current.onmousemove = (e) => {
+        mousePosition.current = normalization({ x: e.clientX, y: e.clientY });
         console.log(normalization({ x: e.clientX, y: e.clientY }));
       }
     }
@@ -25,11 +31,7 @@ function App() {
       console.log('获取webgl绘图上下文失败');
       return;
     }
-    // 指定清空<canvas>的颜色
-    gl.clearColor(0.0, 0.0, 0.0, 1.0);
-    // 清空canvas
-    gl.clear(gl.COLOR_BUFFER_BIT);
-
+    setGl(gl);
     // 顶点着色器
     var VSHADER_SOURCE = `
      attribute vec2 a_Position;
@@ -64,11 +66,23 @@ function App() {
       arr.push(rand(0, 1))
     }
     arr = new Float32Array(arr);
+    setDataArr(arr)
+    setProgram(program);
+  }
+
+  useEffect(() => {
+    render();
+  }, [gl, dataArr, program])
+
+  const render = () => {
+    if (!gl || !dataArr || !program) {
+      return;
+    }
     // BYTES_PER_ELEMENT属性代表了强类型数组中每个元素所占用的字节数
-    const FSIZE = arr.BYTES_PER_ELEMENT;
+    const FSIZE = dataArr.BYTES_PER_ELEMENT;
     const vertexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, arr, gl.STATIC_DRAW)
+    gl.bufferData(gl.ARRAY_BUFFER, dataArr, gl.STATIC_DRAW)
 
     const a_Position = gl.getAttribLocation(program, 'a_Position');
     gl.vertexAttribPointer(a_Position, 2, gl.FLOAT, false, FSIZE * 6, 0)
