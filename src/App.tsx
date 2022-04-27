@@ -5,18 +5,24 @@ import { initShaders, rand, normalization } from '@/utils/common'
 function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [pointCount] = useState(2000);
-  const [dataArr, setDataArr] = useState<Float32Array>()
   const [gl, setGl] = useState<WebGLRenderingContext>()
   const [program, setProgram] = useState<WebGLProgram>()
-  const mousePosition = useRef({ x: 0, y: 0 })
+  const dataArr = useRef<Float32Array>()
+  const mousePosition = useRef<{ x: number; y: number; }>()
+  const isBeyond = useRef<boolean>(false);
+
+  const radius = 0.3;
 
   useEffect(() => {
     init();
     if (canvasRef.current) {
       canvasRef.current.onmousemove = null;
       canvasRef.current.onmousemove = (e) => {
+        isBeyond.current = true;
         mousePosition.current = normalization({ x: e.clientX, y: e.clientY });
-        console.log(normalization({ x: e.clientX, y: e.clientY }));
+      }
+      canvasRef.current.onmouseleave = () => {
+        isBeyond.current = false;
       }
     }
   }, [])
@@ -58,50 +64,103 @@ function App() {
 
     let arr: Float32Array | number[] = [];
     for (let i = 0; i < pointCount; i++) {
+      // x坐标
       arr.push(rand(-1, 1))
+      // y坐标
       arr.push(rand(-1, 1))
+      // 大小
       arr.push(rand(1, 3))
+      // 颜色
       arr.push(rand(0, 1))
       arr.push(rand(0, 1))
       arr.push(rand(0, 1))
+      // x轴速度
+      arr.push(rand(0, 0.1))
+      // y轴速度
+      arr.push(rand(0, 0.1))
     }
     arr = new Float32Array(arr);
-    setDataArr(arr)
+    dataArr.current = arr;
     setProgram(program);
   }
 
   useEffect(() => {
     render();
-  }, [gl, dataArr, program])
+  }, [gl, program])
 
   const render = () => {
-    if (!gl || !dataArr || !program) {
+    if (!gl || !dataArr.current || !program) {
       return;
     }
+    
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    if (mousePosition.current && isBeyond.current) {
+      const { x, y } = mousePosition.current;
+      let newArr: number[][] = []
+      dataArr.current.forEach((item, index) => {
+        if (index % 8 !== 0) {
+          newArr[newArr.length - 1].push(item);
+        } else {
+          newArr.push([item])
+        }
+      })
+      newArr.forEach((item) => {
+        const dist = Math.sqrt(Math.pow(x - item[0], 2) + Math.pow(y - item[1], 2))
+        if (dist <= radius) {
+          if (item[0] <= x && item[1] <= y) {
+            item[6] = item[6] < 0 ? -item[6] : item[6];
+            item[7] = item[7] < 0 ? -item[7] : item[7];
+          } else if (item[0] >= x && item[1] <= y) {
+            item[6] = item[6] < 0 ? item[6] : -item[6];
+            item[7] = item[7] < 0 ? -item[7] : item[7];
+          } else if (item[0] <= x && item[1] >= y) {
+            item[6] = item[6] < 0 ? -item[6] : item[6];
+            item[7] = item[7] < 0 ? item[7] : -item[7];
+          } else if (item[0] >= x && item[1] >= y) {
+            item[6] = item[6] < 0 ? item[6] : -item[6];
+            item[7] = item[7] < 0 ? item[7] : -item[7];
+          }
+          if (dist < 0.02) {
+            return;
+          }
+          item[0] += item[6]
+          item[1] += item[7]
+        }
+      })
+
+      dataArr.current = new Float32Array(newArr.flat())
+      console.log(dataArr.current);
+    }
+
+
+
     // BYTES_PER_ELEMENT属性代表了强类型数组中每个元素所占用的字节数
-    const FSIZE = dataArr.BYTES_PER_ELEMENT;
+    const FSIZE = dataArr.current.BYTES_PER_ELEMENT;
     const vertexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, dataArr, gl.STATIC_DRAW)
+    gl.bufferData(gl.ARRAY_BUFFER, dataArr.current, gl.STATIC_DRAW)
 
     const a_Position = gl.getAttribLocation(program, 'a_Position');
-    gl.vertexAttribPointer(a_Position, 2, gl.FLOAT, false, FSIZE * 6, 0)
+    gl.vertexAttribPointer(a_Position, 2, gl.FLOAT, false, FSIZE * 8, 0)
     gl.enableVertexAttribArray(a_Position)
 
     const a_PointSize = gl.getAttribLocation(program, 'a_PointSize');
-    gl.vertexAttribPointer(a_PointSize, 1, gl.FLOAT, false, FSIZE * 6, FSIZE * 2)
+    gl.vertexAttribPointer(a_PointSize, 1, gl.FLOAT, false, FSIZE * 8, FSIZE * 2)
     gl.enableVertexAttribArray(a_PointSize)
 
     const a_Color = gl.getAttribLocation(program, 'a_Color');
-    gl.vertexAttribPointer(a_Color, 3, gl.FLOAT, false, FSIZE * 6, FSIZE * 3)
+    gl.vertexAttribPointer(a_Color, 3, gl.FLOAT, false, FSIZE * 8, FSIZE * 3)
     gl.enableVertexAttribArray(a_Color)
 
     // 指定清空<canvas>的颜色
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
     // 清空canvas
     gl.clear(gl.COLOR_BUFFER_BIT);
+
     // 绘制一个点
     gl.drawArrays(gl.POINTS, 0, pointCount);
+    requestAnimationFrame(render)
   }
 
   return (

@@ -6,6 +6,7 @@ const { resolve } = require('path');
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
+  base: "/webgl-game-arehouse/",
   server: {
     port: 8422
   },

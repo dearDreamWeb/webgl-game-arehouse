@@ -70,6 +70,6 @@ export function normalization({ x, y }: { x: number; y: number }) {
     const { x: domX, y: domY, width, height } = canvasDom!.getBoundingClientRect()
     return {
         x: (x - domX - width / 2) / (width / 2),
-        y: (y - domY - height / 2) / (height / 2)
+        y: -(y - domY - height / 2) / (height / 2)
     }
 }
