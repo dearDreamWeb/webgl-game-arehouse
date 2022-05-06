@@ -4,14 +4,14 @@ import { initShaders, rand, normalization } from '@/utils/common'
 
 function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [pointCount] = useState(2000);
+  const [pointCount] = useState(1000);
   const [gl, setGl] = useState<WebGLRenderingContext>()
   const [program, setProgram] = useState<WebGLProgram>()
   const dataArr = useRef<Float32Array>()
   const mousePosition = useRef<{ x: number; y: number; }>()
   const isBeyond = useRef<boolean>(false);
 
-  const radius = 0.3;
+  const radius = 0.5
 
   useEffect(() => {
     init();
@@ -69,15 +69,15 @@ function App() {
       // y坐标
       arr.push(rand(-1, 1))
       // 大小
-      arr.push(rand(1, 3))
+      arr.push(rand(2, 3))
       // 颜色
       arr.push(rand(0, 1))
       arr.push(rand(0, 1))
       arr.push(rand(0, 1))
       // x轴速度
-      arr.push(rand(0, 0.1))
+      arr.push(rand(-0.01, 0.01))
       // y轴速度
-      arr.push(rand(0, 0.1))
+      arr.push(rand(-0.01, 0.01))
     }
     arr = new Float32Array(arr);
     dataArr.current = arr;
@@ -92,7 +92,7 @@ function App() {
     if (!gl || !dataArr.current || !program) {
       return;
     }
-    
+
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     if (mousePosition.current && isBeyond.current) {
@@ -107,7 +107,14 @@ function App() {
       })
       newArr.forEach((item) => {
         const dist = Math.sqrt(Math.pow(x - item[0], 2) + Math.pow(y - item[1], 2))
+        const angle = Math.atan2(Math.abs(y - item[1]), Math.abs(x - item[0])); // 角度
         if (dist <= radius) {
+          if (dist < 0.05) {
+            return;
+          }
+          item[6] = 0.003 / dist * Math.cos(angle);
+          item[7] = 0.003 / dist * Math.sin(angle);
+
           if (item[0] <= x && item[1] <= y) {
             item[6] = item[6] < 0 ? -item[6] : item[6];
             item[7] = item[7] < 0 ? -item[7] : item[7];
@@ -121,18 +128,37 @@ function App() {
             item[6] = item[6] < 0 ? item[6] : -item[6];
             item[7] = item[7] < 0 ? item[7] : -item[7];
           }
-          if (dist < 0.02) {
-            return;
-          }
+
           item[0] += item[6]
           item[1] += item[7]
+
+          if (item[0] <= -1) {
+            item[0] = -0.9
+            item[6] *= -1
+          } else if (item[0] >= 1) {
+            item[0] = 0.9;
+            item[6] *= -1
+          }
+
+          if (item[1] <= -1) {
+            item[1] = -0.9
+            item[7] *= -1
+          } else if (item[1] >= 1) {
+            item[1] = 0.9;
+            item[7] *= -1
+          }
+        } else {
+          // item[6] -= 0.01;
+          // item[7] -= 0.01;
+          // item[0] += item[6]
+          // item[1] += item[7]
         }
       })
 
       dataArr.current = new Float32Array(newArr.flat())
-      console.log(dataArr.current);
-    }
 
+    }
+    // console.log(dataArr.current[0],dataArr.current[1],dataArr.current[6],dataArr.current[7]);
 
 
     // BYTES_PER_ELEMENT属性代表了强类型数组中每个元素所占用的字节数
