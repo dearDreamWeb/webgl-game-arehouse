@@ -2,20 +2,31 @@ import React, { useEffect, useState, useRef } from 'react'
 import styles from './App.module.less'
 import { initShaders, rand, normalization } from '@/utils/common'
 
+// 粒子的数量
+const POINTCOUNT = 2000;
+
+// 鼠标影响粒子的半径范围
+const RADIUS = 0.4;
+
 function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [pointCount] = useState(2000);
   const [gl, setGl] = useState<WebGLRenderingContext>()
   const [program, setProgram] = useState<WebGLProgram>()
   const dataArr = useRef<Float32Array>()
   const mousePosition = useRef<{ x: number; y: number; }>()
   const isBeyond = useRef<boolean>(false);
   const isMouseDown = useRef<boolean>(false);
-
-  const radius = 0.4
+  const [isChangeCursor,setIsChangeCursor] = useState<boolean>(false)
 
   useEffect(() => {
     init();
+    addEventListeners();
+  }, [])
+
+  /**
+   * 绑定事件
+   */
+  const addEventListeners = () => {
     if (canvasRef.current) {
       canvasRef.current.onmousemove = null;
       canvasRef.current.onmousemove = (e) => {
@@ -30,14 +41,20 @@ function App() {
       canvasRef.current.onmouseup = null;
       canvasRef.current.onmousedown = (e) => {
         isMouseDown.current = true;
+        setIsChangeCursor(true)
         mousePosition.current = normalization({ x: e.clientX, y: e.clientY });
       };
       canvasRef.current.onmouseup = () => {
         isMouseDown.current = false;
+        setIsChangeCursor(false)
       };
     }
-  }, [])
+  }
 
+  /**
+   * 初始化webgl程序
+   * @returns 
+   */
   const init = () => {
     const canvasDom = canvasRef.current;
     if (!canvasDom) {
@@ -76,7 +93,8 @@ function App() {
 
 
     let arr: Float32Array | number[] = [];
-    for (let i = 0; i < pointCount; i++) {
+    // 遍历每八个一组形成二维数组，每一组数据包含该粒子的xy坐标、大小、颜色、xy速度
+    for (let i = 0; i < POINTCOUNT; i++) {
       // x坐标
       arr.push(rand(-1, 1))
       // y坐标
@@ -101,6 +119,10 @@ function App() {
     render();
   }, [gl, program])
 
+  /**
+   * 实时渲染
+   * @returns 
+   */
   const render = () => {
     if (!gl || !dataArr.current || !program) {
       return;
@@ -111,6 +133,7 @@ function App() {
     if (mousePosition.current && isBeyond.current) {
       const { x, y } = mousePosition.current;
       let newArr: number[][] = []
+      // 拆分成八个一组
       dataArr.current.forEach((item, index) => {
         if (index % 8 !== 0) {
           newArr[newArr.length - 1].push(item);
@@ -118,32 +141,36 @@ function App() {
           newArr.push([item])
         }
       })
+      // 在鼠标影响粒子半径范围内改变粒子的位置
       newArr.forEach((item) => {
         const dist = Math.sqrt(Math.pow(x - item[0], 2) + Math.pow(y - item[1], 2))
         const angle = Math.atan2(y - item[1], x - item[0]); // 角度
-        if (dist <= radius) {
-          if(!isMouseDown.current){
+        // 距离小于等于RADIUS时将粒子向鼠标移动
+        if (dist <= RADIUS) {
+          if (!isMouseDown.current) {
             if (dist < 0.05) {
               item[6] = rand(-0.001, 0.001)
               item[7] = rand(-0.001, 0.001)
               return;
             }
+            // 让粒子和鼠标的距离越近，速度越快
             item[6] = 0.003 / dist * Math.cos(angle);
             item[7] = 0.003 / dist * Math.sin(angle);
-          }else{
+          } else {
+            // 让粒子反方向运动
             item[6] -= 0.0001 / dist * Math.cos(angle);
             item[7] -= 0.0001 / dist * Math.sin(angle);
           }
           item[0] += item[6]
           item[1] += item[7]
         } else {
+          // 粒子不在鼠标影响范围内的话，将速度递减，近乎为0
           item[6] *= 0.99;
           item[7] *= 0.99;
           item[0] += item[6]
           item[1] += item[7]
         }
-
-
+        // 判断粒子是否到达了左右边界，如果到达左右边界，改变x轴运动方向
         if (item[0] <= -1) {
           item[0] = -0.99
           item[6] *= -1
@@ -151,7 +178,7 @@ function App() {
           item[0] = 0.99;
           item[6] *= -1
         }
-
+        // 判断粒子是否到达了上下边界，如果到达上下边界，改变y轴运动方向
         if (item[1] <= -1) {
           item[1] = -0.99
           item[7] *= -1
@@ -160,12 +187,8 @@ function App() {
           item[7] *= -1
         }
       })
-
       dataArr.current = new Float32Array(newArr.flat())
-
     }
-    // console.log(dataArr.current[0],dataArr.current[1],dataArr.current[6],dataArr.current[7]);
-
 
     // BYTES_PER_ELEMENT属性代表了强类型数组中每个元素所占用的字节数
     const FSIZE = dataArr.current.BYTES_PER_ELEMENT;
@@ -191,13 +214,13 @@ function App() {
     gl.clear(gl.COLOR_BUFFER_BIT);
 
     // 绘制一个点
-    gl.drawArrays(gl.POINTS, 0, pointCount);
+    gl.drawArrays(gl.POINTS, 0, POINTCOUNT);
     requestAnimationFrame(render)
   }
 
   return (
     <div>
-      <canvas id='canvasDom' ref={canvasRef} width='800' height='800'></canvas>
+      <canvas id='canvasDom' className={isChangeCursor?styles.canvasDown:''} ref={canvasRef} width='800' height='800'></canvas>
     </div>
   )
 }
