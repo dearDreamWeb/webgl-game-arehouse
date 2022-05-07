@@ -4,14 +4,15 @@ import { initShaders, rand, normalization } from '@/utils/common'
 
 function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [pointCount] = useState(1000);
+  const [pointCount] = useState(2000);
   const [gl, setGl] = useState<WebGLRenderingContext>()
   const [program, setProgram] = useState<WebGLProgram>()
   const dataArr = useRef<Float32Array>()
   const mousePosition = useRef<{ x: number; y: number; }>()
   const isBeyond = useRef<boolean>(false);
+  const isMouseDown = useRef<boolean>(false);
 
-  const radius = 0.5
+  const radius = 0.4
 
   useEffect(() => {
     init();
@@ -24,6 +25,16 @@ function App() {
       canvasRef.current.onmouseleave = () => {
         isBeyond.current = false;
       }
+
+      canvasRef.current.onmousedown = null;
+      canvasRef.current.onmouseup = null;
+      canvasRef.current.onmousedown = (e) => {
+        isMouseDown.current = true;
+        mousePosition.current = normalization({ x: e.clientX, y: e.clientY });
+      };
+      canvasRef.current.onmouseup = () => {
+        isMouseDown.current = false;
+      };
     }
   }, [])
 
@@ -32,6 +43,8 @@ function App() {
     if (!canvasDom) {
       return;
     }
+    canvasDom.width = window.innerWidth;
+    canvasDom.height = window.innerHeight;
     const gl = canvasDom.getContext('webgl');
     if (!gl) {
       console.log('获取webgl绘图上下文失败');
@@ -107,51 +120,44 @@ function App() {
       })
       newArr.forEach((item) => {
         const dist = Math.sqrt(Math.pow(x - item[0], 2) + Math.pow(y - item[1], 2))
-        const angle = Math.atan2(Math.abs(y - item[1]), Math.abs(x - item[0])); // 角度
+        const angle = Math.atan2(y - item[1], x - item[0]); // 角度
         if (dist <= radius) {
-          if (dist < 0.05) {
-            return;
+          if(!isMouseDown.current){
+            if (dist < 0.05) {
+              item[6] = rand(-0.001, 0.001)
+              item[7] = rand(-0.001, 0.001)
+              return;
+            }
+            item[6] = 0.003 / dist * Math.cos(angle);
+            item[7] = 0.003 / dist * Math.sin(angle);
+          }else{
+            item[6] -= 0.0001 / dist * Math.cos(angle);
+            item[7] -= 0.0001 / dist * Math.sin(angle);
           }
-          item[6] = 0.003 / dist * Math.cos(angle);
-          item[7] = 0.003 / dist * Math.sin(angle);
-
-          if (item[0] <= x && item[1] <= y) {
-            item[6] = item[6] < 0 ? -item[6] : item[6];
-            item[7] = item[7] < 0 ? -item[7] : item[7];
-          } else if (item[0] >= x && item[1] <= y) {
-            item[6] = item[6] < 0 ? item[6] : -item[6];
-            item[7] = item[7] < 0 ? -item[7] : item[7];
-          } else if (item[0] <= x && item[1] >= y) {
-            item[6] = item[6] < 0 ? -item[6] : item[6];
-            item[7] = item[7] < 0 ? item[7] : -item[7];
-          } else if (item[0] >= x && item[1] >= y) {
-            item[6] = item[6] < 0 ? item[6] : -item[6];
-            item[7] = item[7] < 0 ? item[7] : -item[7];
-          }
-
           item[0] += item[6]
           item[1] += item[7]
-
-          if (item[0] <= -1) {
-            item[0] = -0.9
-            item[6] *= -1
-          } else if (item[0] >= 1) {
-            item[0] = 0.9;
-            item[6] *= -1
-          }
-
-          if (item[1] <= -1) {
-            item[1] = -0.9
-            item[7] *= -1
-          } else if (item[1] >= 1) {
-            item[1] = 0.9;
-            item[7] *= -1
-          }
         } else {
-          // item[6] -= 0.01;
-          // item[7] -= 0.01;
-          // item[0] += item[6]
-          // item[1] += item[7]
+          item[6] *= 0.99;
+          item[7] *= 0.99;
+          item[0] += item[6]
+          item[1] += item[7]
+        }
+
+
+        if (item[0] <= -1) {
+          item[0] = -0.99
+          item[6] *= -1
+        } else if (item[0] >= 1) {
+          item[0] = 0.99;
+          item[6] *= -1
+        }
+
+        if (item[1] <= -1) {
+          item[1] = -0.99
+          item[7] *= -1
+        } else if (item[1] >= 1) {
+          item[1] = 0.99;
+          item[7] *= -1
         }
       })
 
@@ -190,8 +196,8 @@ function App() {
   }
 
   return (
-    <div className={styles.app}>
-      <canvas id='canvasDom' className={styles.canvasBox} ref={canvasRef} width='800' height='800'></canvas>
+    <div>
+      <canvas id='canvasDom' ref={canvasRef} width='800' height='800'></canvas>
     </div>
   )
 }
