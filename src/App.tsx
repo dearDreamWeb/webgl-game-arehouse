@@ -15,21 +15,13 @@ import {
   PointLight,
   GridHelper,
   AxesHelper,
+  Object3D,
+  MeshPhongMaterial,
+  BoxGeometry,
+  CylinderGeometry,
 } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
-import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader';
-import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader';
-import { MTLLoader } from 'three/examples/jsm/loaders/MTLLoader';
 
-
-interface CreateFloorProps {
-  position: { x: number; y: number; z: number };
-  rotateX?: number;
-  rotateY?: number;
-  width: number;
-  height: number;
-  textureImage: string;
-}
 
 function App() {
   const navigate = useNavigate();
@@ -44,11 +36,11 @@ function App() {
   const audioRef = useRef<any>();
   const meshes = useRef<any[]>([]).current;
   const snowClass = useRef<any[]>([]).current;
-
-  const [isLoadSuccess, setIsLoadSuccess] = useState<boolean>(false);
+  const tank = useRef<Object3D>();
+  const bodyMesh = useRef<Mesh>()
 
   // 平行光
-  const pointLight = useRef<PointLight>(new PointLight(0xffffff, 1, 70)).current;
+  const pointLight = useRef<PointLight>(new PointLight(0xffffff, 1, 100)).current;
   // 环境光
   const ambientLight = useRef<AmbientLight>(new AmbientLight('#ffffff', 1)).current;
 
@@ -61,7 +53,7 @@ function App() {
     camera.fov = 45;
     camera.near = 1;
     camera.far = 1000;
-    camera.position.set(0, 130, 100);
+    camera.position.set(10, 10, 50);
     camera.lookAt(0, 0, 0);
     camera.updateProjectionMatrix();
   }, [render, body])
@@ -72,7 +64,7 @@ function App() {
   const createLight = useCallback(() => {
     // pointLight.castShadow = true;
     pointLight.visible = true;
-    pointLight.position.set(0, 0, -40);
+    pointLight.position.set(10, 40, 0);
     // pointLight.shadow.mapSize.width = 100;
     // pointLight.shadow.mapSize.height = 100;
     scene.add(pointLight, ambientLight);
@@ -81,11 +73,6 @@ function App() {
 
   const renderScene = useCallback(() => {
     render.render(scene, camera);
-
-    const time = clock.current.getDelta();
-    // if (mixer.current) {
-    //     mixer.current.update(time);
-    // }
     raf.current = window.requestAnimationFrame(() => renderScene());
   }, [render])
 
@@ -107,56 +94,53 @@ function App() {
   }
 
   /**
-   * 模型加载进度
+   * 初始化坦克
    */
-  const modelProgress = (progress: ProgressEvent<EventTarget>) => {
-    // const { loaded, total } = progress;
-    // const rate = (loaded / total * 100).toFixed(2);
-    // if (Number(rate) >= 100) {
-    //     // 播放音乐
-    //     audioRef.current.play();
-    //     setIsLoadSuccess(true);
-    // }
-  }
+  const initTank = () => {
+    tank.current = new Object3D();
+    scene.add(tank.current);
+    // 创建底盘
+    const carWidth = 15
+    const carHeight = 4
+    const carLength = 10
 
-  /**
-   * 加载模型
-   */
-  const loaderFbx = useCallback(() => {
-    // let loader = new OBJLoader(); //obj加载器
-    // let mtlLoader = new MTLLoader(); //材质文件加载器
-    // mtlLoader.load('/obj/room.mtl', function (materials) {
-    //   // 返回一个包含材质的对象MaterialCreator
-    //   console.log(materials);
-    //   materials.preload();
-    //   //obj的模型会和MaterialCreator包含的材质对应起来
-    //   loader.setMaterials(materials);
-    //   const texture = new Texture()
-    //   loader.load('/obj/room.obj', function (obj) {
-    //     console.log(obj);
-    //     scene.add(obj); //返回的组对象插入场景中
-    //     // 加载后操作
-    //     obj.scale.set(10, 10, 10); //缩放球体网格模型		
-    //   })
-    // })
+    // 轮子参数
+    const wheelRadius = 2.5
+    const wheelThickness = 0.5
+    const wheelSegments = 36
+
+    // 几何体
+    const bodyGeometry = new BoxGeometry(carWidth, carHeight, carLength)
+    const bodyMaterial = new MeshPhongMaterial({ color: 0x6688aa })
+    bodyMesh.current = new Mesh(bodyGeometry, bodyMaterial)
+    bodyMesh.current.position.y = wheelRadius*2 - carHeight / 2 + wheelThickness
+    tank.current.add(bodyMesh.current)
 
 
-    let loader = new FBXLoader(); //FBX加载器
-      loader.load('/fbx/room.fbx', (obj) => {
-          obj.position.set(0, 0, 0);
-          obj.scale.set(0.1, 0.1, 0.1);
-          scene.add(obj);
-      }, modelProgress)
-  }, [])
-
-  /**
-   * 随机数
-   * @param min 
-   * @param max 
-   * @returns 
-   */
-  const randomRange = (min: number, max: number): number => {
-    return Math.random() * (max - min) + min;
+    // 圆柱体
+    const wheelGeometry = new CylinderGeometry(
+      wheelRadius, // 圆柱顶部圆的半径
+      wheelRadius, // 圆柱底部圆的半径
+      wheelThickness, // 高度
+      wheelSegments // X轴分成多少段
+    )
+    const wheelMaterial = new MeshPhongMaterial({ color: 0x888888 })
+    // 根据底盘 定位轮胎位置
+    const wheelPositions = [
+      [-carWidth / 2 - wheelThickness / 2, -carHeight / 2, carLength / 2],
+      [-carWidth / 2 - wheelThickness / 2, -carHeight / 2, -carLength / 2],
+      [- wheelThickness / 2, -carHeight / 2, carLength / 2],
+      [- wheelThickness / 2, -carHeight / 2, -carLength / 2],
+      [carWidth / 2 - wheelThickness / 2, -carHeight / 2, carLength / 2],
+      [carWidth / 2 - wheelThickness / 2, -carHeight / 2, -carLength / 2]
+    ]
+    wheelPositions.forEach((position) => {
+      const mesh = new Mesh(wheelGeometry, wheelMaterial)
+      mesh.position.set(position[0], position[1], position[2])
+      mesh.rotation.z = Math.PI * 0.5
+      mesh.rotation.y = Math.PI * 0.5
+      bodyMesh.current!.add(mesh)
+    })
   }
 
   /**
@@ -166,8 +150,8 @@ function App() {
     body.current!.append(render.domElement);
     init();
     initControls();
+    initTank();
     createLight();
-    loaderFbx();
     renderScene();
     return () => {
       cancelAnimationFrame(raf.current!);
