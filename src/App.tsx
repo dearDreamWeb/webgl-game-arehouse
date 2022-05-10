@@ -22,6 +22,7 @@ import {
   CylinderGeometry,
   SphereGeometry,
   TextureLoader,
+  QuadraticBezierCurve3,
 } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry';
@@ -57,11 +58,15 @@ function App() {
   const meshes = useRef<any[]>([]).current;
   const snowClass = useRef<any[]>([]).current;
   const tank = useRef<Object3D>(new Object3D()).current;
-  const turretPivot = useRef<Object3D>(new Object3D()).current;
+  let controls = useRef<OrbitControls>().current;
+  let turretPivot = useRef<Object3D>(new Object3D()).current;
   let bodyMesh = useRef<Mesh>().current;
+  let bulletMesh = useRef<Mesh>().current;
+  let animationInterval = useRef<number>().current;
   let raycaster = useRef<Raycaster>(new Raycaster()).current;
-  let mouse = useRef<Vector2>(new Vector2()).current;
+  let mouse = useRef<Vector3>(new Vector3()).current;
   let fontUuid = useRef<string[]>([]).current
+  let bulletPointsIndex = useRef<number>(0).current
 
   // 平行光
   const pointLight = useRef<PointLight>(new PointLight(0xffffff, 1, 100)).current;
@@ -83,12 +88,15 @@ function App() {
 
     if (body.current) {
       body.current.onclick = null;
-      body.current.onclick = onMouseClick
+      body.current.onclick = (e) => onMouseHandle(e, 'click')
+      body.current.onmousemove = null;
+      body.current.onmousemove = (e) => onMouseHandle(e, 'move')
     }
     return () => {
       if (!body.current) {
         return;
       }
+      body.current.onclick = null;
       body.current.onmousemove = null;
     }
   }, [render, body])
@@ -105,7 +113,6 @@ function App() {
 
   const renderScene = useCallback(() => {
     render.render(scene, camera);
-
     raf.current = window.requestAnimationFrame(() => renderScene());
   }, [render])
 
@@ -120,9 +127,9 @@ function App() {
     const axisHelper = new AxesHelper(500);
     scene.add(axisHelper);
     // 创建控制器
-    const controls = new OrbitControls(camera, render.domElement);
-    controls.enableDamping = true
-    controls.dampingFactor = 0.25
+    controls = new OrbitControls(camera, render.domElement);
+    controls.enableDamping = true // 启用阻尼（惯性），这将给控制器带来重量感，如果该值被启用，必须在动画循环里调用.update()
+    controls.dampingFactor = 0.25 // 阻尼惯性大小
     controls.rotateSpeed = 0.35
   }
 
@@ -200,23 +207,16 @@ function App() {
     domeMesh.position.y = 2
 
     // 炮干
-    const turretRadius = 0.5
-    const turretHeight = 10
-    const turretRadialSegments = 64;
-    const turretGeometry = new CylinderGeometry(
-      turretRadius, // 圆柱顶部圆的半径
-      turretRadius, // 圆柱底部圆的半径
-      turretHeight, // 长度
-      turretRadialSegments, // X轴分成多少段
-      turretRadialSegments // y轴分成多少段
-    )
-    const turretMaterial = new MeshPhongMaterial({ color: 0x888888 })
-    const turretMesh = new Mesh(turretGeometry, turretMaterial)
+    const turretWidth = 0.5
+    const turretHeight = 0.5
+    const turretLength = 10
+    const turretGeometry = new BoxGeometry(turretWidth, turretHeight, turretLength)
+    const turretMesh = new Mesh(turretGeometry, bodyMaterial)
+    turretPivot = new Object3D()
+    turretPivot.position.y = 5
+    turretMesh.position.z = turretLength * 0.5
+    turretPivot.rotation.y = Math.PI
     turretPivot.add(turretMesh)
-    turretMesh.position.y = 3
-    turretMesh.position.z = -5
-    turretMesh.rotation.z = Math.PI / 2
-    turretMesh.rotation.y = Math.PI / 2
     bodyMesh.add(turretPivot)
   }
 
@@ -269,29 +269,67 @@ function App() {
     });
   }
 
- 
+
   /**
-   * 点击跳转
+   * 鼠标
    * @param event 
    */
-  function onMouseClick(event: MouseEvent) {
+  function onMouseHandle(event: MouseEvent, type: 'click' | 'move') {
 
     //通过鼠标点击的位置计算出raycaster所需要的点的位置，以屏幕中心为原点，值的范围为-1到1.
 
     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
     mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
-
     // 通过鼠标点的位置和当前相机的矩阵计算出raycaster
     raycaster.setFromCamera(mouse, camera);
 
     // 获取raycaster直线和所有模型相交的数组集合
     var intersects = raycaster.intersectObjects(scene.children);
 
-    if(intersects.length && fontUuid.includes(intersects[0].object.uuid)){
-      console.log('跳转');
-      // navigate(linkData[fontUuid.indexOf(intersects[0].object.uuid)].path)
+    if (intersects.length) {
+      const { x, y, z } = intersects[0].point;
+      mouse = new Vector3(x, y, z)
+      if (type === 'move') {
+        // 炮干指向鼠标
+        turretPivot.lookAt(mouse)
+      } else if (type === 'click' && fontUuid.includes(intersects[0].object.uuid)) {
+        const pointStart = new Vector3(turretPivot.position.x, turretPivot.position.y + 8, turretPivot.position.z);
+        const pointEnd = new Vector3(mouse.x, mouse.y, mouse.z);
+        const pointControl = new Vector3((mouse.x - turretPivot.position.x) / 2, (mouse.y - turretPivot.position.y) / 2, (mouse.z - turretPivot.position.z) / 2)
+        // 创建三维二次贝塞尔曲线
+        const curve = new QuadraticBezierCurve3(
+          pointStart,
+          pointControl,
+          pointEnd
+        );
+        bulletPointsIndex = 0;
+        const divisions = 30; // 曲线的分段数量
+        const points = curve.getPoints(divisions);
+        bulletPointsIndex = points.length;
+        bulletMesh && scene.remove(bulletMesh);
+        animationInterval && cancelAnimationFrame(animationInterval)
+        const geometry = new SphereGeometry(1, 32, 32);
+        const material = new MeshLambertMaterial({ color: 0xffff00, side: DoubleSide, });
+        bulletMesh = new Mesh(geometry, material);
+        scene.add(bulletMesh)
+        animation(points, 0)
+        console.log('click', points);
+        // navigate(linkData[fontUuid.indexOf(intersects[0].object.uuid)].path)
+      }
     }
+  }
 
+  const animation = (points: Vector3[], index: number) => {
+    if (index >= points.length) {
+      bulletMesh && scene.remove(bulletMesh);
+      animationInterval && cancelAnimationFrame(animationInterval)
+      return;
+    }
+    bulletMesh!.position.x = points[index].x;
+    bulletMesh!.position.y = points[index].y;
+    bulletMesh!.position.z = points[index].z;
+    index++;
+    animationInterval = window.requestAnimationFrame(() => animation(points, index))
   }
 
   /**
