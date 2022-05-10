@@ -1,7 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react'
 import styles from './app.module.less'
 import { useNavigate } from 'react-router-dom'
-
 import {
   Scene, PerspectiveCamera, WebGLRenderer, Mesh, Clock,
   AnimationMixer, ImageUtils, SpotLight,
@@ -11,6 +10,7 @@ import {
   AmbientLight,
   PlaneGeometry,
   Vector3,
+  Vector2,
   Raycaster,
   Texture,
   PointLight,
@@ -24,7 +24,24 @@ import {
   TextureLoader,
 } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry';
+import { FontLoader } from 'three/examples/jsm/loaders/FontLoader';
 
+
+const linkData = [
+  {
+    path: '/particleEffects',
+    text: '粒子特效'
+  },
+  {
+    path: '/particleEffects',
+    text: '粒子特效'
+  },
+  {
+    path: '/particleEffects',
+    text: '粒子特效'
+  },
+]
 
 function App() {
   const navigate = useNavigate();
@@ -42,8 +59,9 @@ function App() {
   const tank = useRef<Object3D>(new Object3D()).current;
   const turretPivot = useRef<Object3D>(new Object3D()).current;
   let bodyMesh = useRef<Mesh>().current;
-  let wall = useRef<Mesh>().current
-  const mousePosition = useRef({ x: 0, y: 0, z: 0 })
+  let raycaster = useRef<Raycaster>(new Raycaster()).current;
+  let mouse = useRef<Vector2>(new Vector2()).current;
+  let fontUuid = useRef<string[]>([]).current
 
   // 平行光
   const pointLight = useRef<PointLight>(new PointLight(0xffffff, 1, 100)).current;
@@ -63,26 +81,16 @@ function App() {
     camera.lookAt(0, 0, 0);
     camera.updateProjectionMatrix();
 
-    // if (body.current) {
-    //   body.current.onmousemove = null;
-    //   body.current.onmousemove = (e) => {
-    //     const { x, y, z } = getMousePosition(e)
-    //     const targetPosition2 = new Vector3(-x, -y, -z)
-    //     console.log(targetPosition2);
-    //     // 获取目标全局坐标
-    //     // targetMesh.getWorldPosition(targetPosition2)
-    //     // 炮台瞄准目标
-    //     turretPivot!.lookAt(targetPosition2)
-
-    //     mousePosition.current = { x, y, z }
-    //   }
-    // }
-    // return () => {
-    //   if (!body.current) {
-    //     return;
-    //   }
-    //   body.current.onmousemove = null;
-    // }
+    if (body.current) {
+      body.current.onclick = null;
+      body.current.onclick = onMouseClick
+    }
+    return () => {
+      if (!body.current) {
+        return;
+      }
+      body.current.onmousemove = null;
+    }
   }, [render, body])
 
   /**
@@ -221,12 +229,11 @@ function App() {
     const wallH = 50;
     const wallD = 10;
     const geometry = new BoxGeometry(wallW, wallH, wallD);
-    const textureLoader = new TextureLoader();
+    const textureLoader = new TextureLoader()
     textureLoader.load('/images/stone.png', (texture) => {
       const material = new MeshLambertMaterial({
-        // color: 0x0000ff, // 设置颜色纹理贴图：Texture对象作为材质map属性的属性值 
         map: texture,//设置颜色贴图属性值
-        side: DoubleSide
+        side: DoubleSide,
       }); //材质对象Material 
       let mesh = new Mesh(geometry, material); //网格模型对象Mesh 
       scene.add(mesh)
@@ -235,26 +242,56 @@ function App() {
       mesh.position.z = -15
       mesh.rotation.y = -Math.PI / 3;
     })
+
+    // 加载文字
+    const loader = new FontLoader();
+    loader.load('/fonts/BiaoTiMinChoS_Regular.json', function (font) {
+      linkData.forEach((item, index) => {
+        const geometry = new TextGeometry(item.text, {
+          font: font,
+          size: 5,
+          height: 0,
+          bevelThickness: 1,
+          bevelSegments: 5,
+        });
+        const fontMaterial = new MeshLambertMaterial({
+          color: 0xffffff
+        });
+        const fontModel = new Mesh(geometry, fontMaterial);
+        fontUuid = [...fontUuid, fontModel.uuid]
+        fontModel.rotation.y = -Math.PI / 3;
+        fontModel.position.x = 20
+        fontModel.position.y = wallH - 10 * (index + 1)
+        fontModel.position.z = -30
+        scene.add(fontModel)
+      })
+
+    });
   }
 
+ 
   /**
-   * 获取鼠标的3d坐标
+   * 点击跳转
+   * @param event 
    */
-  const getMousePosition = (event: MouseEvent) => {
-    event.preventDefault();
-    let vector = new Vector3();//三维坐标对象
-    vector.set(
-      (event.clientX / window.innerWidth) * 2 - 1,
-      - (event.clientY / window.innerHeight) * 2 + 1,
-      0.5);
-    vector.unproject(camera);
-    let raycaster = new Raycaster(camera.position, vector.sub(camera.position).normalize());
-    let intersects = raycaster.intersectObjects(scene.children);
-    if (intersects.length > 0) {
-      let selected = intersects[0];//取第一个物体
-      return { x: selected.point.x, y: selected.point.y, z: selected.point.z }
+  function onMouseClick(event: MouseEvent) {
+
+    //通过鼠标点击的位置计算出raycaster所需要的点的位置，以屏幕中心为原点，值的范围为-1到1.
+
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
+
+    // 通过鼠标点的位置和当前相机的矩阵计算出raycaster
+    raycaster.setFromCamera(mouse, camera);
+
+    // 获取raycaster直线和所有模型相交的数组集合
+    var intersects = raycaster.intersectObjects(scene.children);
+
+    if(intersects.length && fontUuid.includes(intersects[0].object.uuid)){
+      console.log('跳转');
+      // navigate(linkData[fontUuid.indexOf(intersects[0].object.uuid)].path)
     }
-    return { x: 0, y: 0, z: 0 }
+
   }
 
   /**
