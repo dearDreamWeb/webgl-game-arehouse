@@ -1,33 +1,16 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react'
+import React, { useRef, useEffect, useCallback } from 'react'
 import styles from './app.module.less'
 import { useNavigate } from 'react-router-dom'
 import {
-  Scene, PerspectiveCamera, WebGLRenderer, Mesh, Clock,
-  AnimationMixer, ImageUtils, SpotLight,
-  MeshBasicMaterial, MeshLambertMaterial,
-  BufferAttribute, DoubleSide,
-  DirectionalLight,
-  AmbientLight,
-  PlaneGeometry,
-  Vector3,
-  Vector2,
-  Raycaster,
-  Texture,
-  PointLight,
-  GridHelper,
-  AxesHelper,
-  Object3D,
-  MeshPhongMaterial,
-  BoxGeometry,
-  CylinderGeometry,
-  SphereGeometry,
-  TextureLoader,
-  QuadraticBezierCurve3,
+  Scene, PerspectiveCamera, WebGLRenderer, Mesh, Clock, AnimationMixer, ImageUtils,
+  SpotLight, MeshBasicMaterial, MeshLambertMaterial, BufferAttribute, DoubleSide,
+  DirectionalLight, AmbientLight, PlaneGeometry, Vector3, Vector2, Raycaster, Texture,
+  PointLight, GridHelper, AxesHelper, Object3D, MeshPhongMaterial, BoxGeometry,
+  CylinderGeometry, SphereGeometry, TextureLoader, QuadraticBezierCurve3,
 } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry';
 import { FontLoader } from 'three/examples/jsm/loaders/FontLoader';
-import floor from '@/assets/images/floor.png'
 
 
 const linkData = [
@@ -259,7 +242,7 @@ function App() {
     // 加载文字
     const loader = new FontLoader();
     loader.load('/fonts/BiaoTiMinChoS_Regular.json', function (font) {
-      let arr:Array<Mesh<TextGeometry, MeshLambertMaterial>> = [];
+      let arr: Array<Mesh<TextGeometry, MeshLambertMaterial>> = [];
       linkData.forEach((item, index) => {
         const geometry = new TextGeometry(item.text, {
           font: font,
@@ -280,7 +263,7 @@ function App() {
         scene.add(fontModel)
         arr.push(fontModel)
       })
-      floorModelArr =arr
+      floorModelArr = arr
     });
   }
 
@@ -325,13 +308,13 @@ function App() {
         console.log(123123);
         // 炮干指向鼠标
         turretPivot.lookAt(mouse)
-        floorModelArr.forEach((item)=>{
+        floorModelArr.forEach((item) => {
           item.material.color.set(0xffffff)
         })
-        if(fontUuid.includes(intersects[0].object.uuid)){
+        if (fontUuid.includes(intersects[0].object.uuid)) {
           (intersects[0].object as any).material.color.set(0xff0000)
           body.current!.style.cursor = 'pointer'
-        }else{
+        } else {
           body.current!.style.cursor = 'auto'
         }
       } else if (type === 'click' && fontUuid.includes(intersects[0].object.uuid)) {
