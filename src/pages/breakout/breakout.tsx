@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { initShaders, rand, normalization } from '@/utils/common'
+import Rect from './engine/rect'
 
 const FLATDATA = {
     initSpeed: 0.03,
@@ -30,6 +31,7 @@ function Breakout() {
         // 右下角
         startX + FLATDATA.width, -0.9, 1.0, 0.0, 1.0, 3.0,
     ]).current
+    const rect = useRef<Rect>();
 
     useEffect(() => {
         init();
@@ -84,6 +86,7 @@ function Breakout() {
             console.log('获取webgl绘图上下文失败');
             return;
         }
+        rect.current = new Rect({ gl })
         setGl(gl);
         // 顶点着色器
         const VSHADER_SOURCE = `
@@ -110,6 +113,8 @@ function Breakout() {
         bufferId.current = gl.createBuffer()!;
         bufferIndex.current = gl.createBuffer()!;
         setProgram(program);
+
+
     }
 
     useEffect(() => {
@@ -167,11 +172,12 @@ function Breakout() {
             return;
         }
         applyBufferData();
+
         // 指定清空<canvas>的颜色
         gl.clearColor(0.0, 0.0, 0.0, 1.0);
         // 清空canvas
         gl.clear(gl.COLOR_BUFFER_BIT);
-        // gl.drawArrays(gl.LINE_LOOP, 0, 4);
+        // rect.current?.draw()
         gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0)
         requestAnimationFrame(render)
     }
