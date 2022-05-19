@@ -1,10 +1,13 @@
 import { initShaders, rand, normalization } from '@/utils/common'
 
-interface RectProps {
+interface BulletProps {
     gl: WebGLRenderingContext
 }
-class Rect {
 
+/**
+ * 子弹
+ */
+class Bullet {
     gl: WebGLRenderingContext;
     program: WebGLProgram;
     dataArr: number[];
@@ -17,7 +20,7 @@ class Rect {
     }
     isMove: boolean;
 
-    constructor({ gl }: RectProps) {
+    constructor({ gl }: BulletProps) {
         this.gl = gl;
         this.program = this.initProgram();
         this.bufferId = this.gl.createBuffer()!;
@@ -28,7 +31,7 @@ class Rect {
             x: 0.0,
             y: 0.0
         }
-        this.dataArr = [this.position.x, this.position.y]
+        this.dataArr = [this.position.x, this.position.y, 1.0, 1.0, 1.0]
         this.isMove = false;
         this.init();
     }
@@ -41,15 +44,21 @@ class Rect {
         // 顶点着色器
         const VSHADER_SOURCE = `
             attribute vec2 a_Position;
+            attribute vec3 a_Color;
+            varying vec3 v_Color;
+            uniform mat4 mat;  // 创建一个 uniform 变量，代表平移矩阵
             void main() {
-                gl_Position = vec4(a_Position,0.0,1.0); // 设置坐标
-                gl_PointSize = 500.0; // 设置尺寸
+                gl_Position = mat * vec4(a_Position,0.0,1.0); // 设置坐标
+                gl_PointSize = 8.0; // 设置尺寸
+                v_Color = a_Color;
             } 
         `;
         // 片元着色器
         const FSHADER_SOURCE = `
+        precision mediump float;
+        varying vec3 v_Color;
             void main () {
-                gl_FragColor = vec4(0.0,1.0,1.0,1.0); // 设置颜色
+                gl_FragColor = vec4(v_Color,1.0); // 设置颜色
             }
         `;
         return initShaders(this.gl, VSHADER_SOURCE, FSHADER_SOURCE)
@@ -60,9 +69,14 @@ class Rect {
         const FSIZE = new Float32Array(this.dataArr).BYTES_PER_ELEMENT;
         this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.bufferId);
         this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(this.dataArr), this.gl.STATIC_DRAW);
+
         const a_Position = this.gl.getAttribLocation(this.program, "a_Position");
-        this.gl.vertexAttribPointer(a_Position, 2, this.gl.FLOAT, false, FSIZE * 2, 0);
+        this.gl.vertexAttribPointer(a_Position, 2, this.gl.FLOAT, false, FSIZE * 5, 0);
         this.gl.enableVertexAttribArray(a_Position);
+
+        const a_Color = this.gl.getAttribLocation(this.program, "a_Color");
+        this.gl.vertexAttribPointer(a_Color, 3, this.gl.FLOAT, false, FSIZE * 5, FSIZE * 2);
+        this.gl.enableVertexAttribArray(a_Color);
 
         const { x, y } = this.position;
         let Tx = x;    //x坐标的位置
@@ -75,8 +89,9 @@ class Rect {
             0.0, 0.0, 1.0, 0.0,
             Tx, Ty, Tz, Tw,
         ]);
-        // const matLocation = this.gl!.getUniformLocation(this.program, 'mat');
-        // this.gl!.uniformMatrix4fv(matLocation, false, mat);
+        const matLocation = this.gl!.getUniformLocation(this.program, 'mat');
+        this.gl!.uniformMatrix4fv(matLocation, false, mat);
+        this.draw()
     }
 
     draw() {
@@ -85,4 +100,4 @@ class Rect {
 
 }
 
-export default Rect
+export default Bullet
