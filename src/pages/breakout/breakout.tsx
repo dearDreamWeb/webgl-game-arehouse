@@ -3,9 +3,9 @@ import { initShaders, rand, normalization } from '@/utils/common'
 import Bullet from './engine/bullet'
 
 const FLATDATA = {
-    initSpeed: 0.03,
-    initHelpSpeed: 0.01,
-    width: 0.2,
+    initSpeed: 0.1,
+    initHelpSpeed: 0.005,
+    width: 0.4,
     height: 0.01,
     startX: -0.1,
     startY: -0.89
@@ -29,10 +29,10 @@ function Breakout() {
         FLATDATA.startX, FLATDATA.startY, 1.0, 0.0, 1.0, 3.0,
         // 左下角
         FLATDATA.startX, FLATDATA.startY - FLATDATA.height, 1.0, 0.0, 1.0, 3.0,
-        // 右上角
-        FLATDATA.startX + FLATDATA.width, FLATDATA.startY, 1.0, 0.0, 1.0, 3.0,
         // 右下角
         FLATDATA.startX + FLATDATA.width, FLATDATA.startY - FLATDATA.height, 1.0, 0.0, 1.0, 3.0,
+        // 右上角
+        FLATDATA.startX + FLATDATA.width, FLATDATA.startY, 1.0, 0.0, 1.0, 3.0,
     ]).current
     const bullet = useRef<Bullet>();
 
@@ -180,7 +180,7 @@ function Breakout() {
         gl.clear(gl.COLOR_BUFFER_BIT);
         gl.useProgram(program)
         applyBufferData();
-        bullet.current!.draw({ flatX: FLATDATA.startX + flatX.current, flatEndX: FLATDATA.startX + FLATDATA.width, flatY:FLATDATA.startY, flatH: FLATDATA.height })
+        bullet.current!.draw({ flatX: FLATDATA.startX + flatX.current, flatEndX: FLATDATA.startX+ flatX.current + FLATDATA.width, flatY:FLATDATA.startY, flatH: FLATDATA.height })
         requestAnimationFrame(render)
     }
 

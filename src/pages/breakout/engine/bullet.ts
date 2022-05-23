@@ -26,13 +26,21 @@ class Bullet {
         y: number;
     }
     isMove: boolean;
+    flatData: ApplyBufferDataProps;
 
     constructor({ gl }: BulletProps) {
         this.gl = gl;
         this.program = this.initProgram();
         this.bufferId = this.gl.createBuffer()!;
 
-        this.vx = 0;
+        this.flatData = {
+            flatX: 0,
+            flatEndX: 0,
+            flatY: 0,
+            flatH: 0,
+        }
+
+        this.vx = 0.02;
         this.vy = -0.01;
         this.position = {
             x: 0.0,
@@ -66,7 +74,7 @@ class Bullet {
         return initShaders(this.gl, VSHADER_SOURCE, FSHADER_SOURCE)
     }
 
-    applyBufferData({ flatX, flatEndX, flatY, flatH }: ApplyBufferDataProps) {
+    applyBufferData() {
         this.gl.useProgram(this.program)
         // BYTES_PER_ELEMENT属性代表了强类型数组中每个元素所占用的字节数
         const FSIZE = new Float32Array(this.dataArr).BYTES_PER_ELEMENT;
@@ -83,9 +91,7 @@ class Bullet {
 
         const { x, y } = this.position;
 
-        if ((x > flatX && x < flatEndX && y >= flatY && Math.abs(y - flatY) <= flatH) || y >= 1) {
-            this.vy *= -1
-        }
+        this.beyondBoundary();
 
         this.position = {
             x: x + this.vx,
@@ -110,9 +116,24 @@ class Bullet {
         const { y } = this.position
         return Math.abs(y) > 1;
     }
+
+    beyondBoundary() {
+        const { x, y } = this.position;
+        const { flatX, flatEndX, flatY, flatH } = this.flatData;
+
+        if ((x > flatX && x < flatEndX && y < 0 && y >= flatY && Number((Math.abs(y - flatY)).toFixed(2)) <= flatH) || y >= 1) {
+            this.vy *= -1
+        }
+
+        if (Math.abs(x) >= 1) {
+            this.vx *= -1
+        }
+    }
+
     // startX +flatX.current,startX + FLATDATA.width,-0.89,0.01
     draw({ flatX, flatEndX, flatY, flatH }: ApplyBufferDataProps) {
-        this.applyBufferData({ flatX, flatEndX, flatY, flatH });
+        this.flatData = { flatX, flatEndX, flatY, flatH }
+        this.applyBufferData();
         if (this.isBeyondBoundaryY()) {
             return;
         }
