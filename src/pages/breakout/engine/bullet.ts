@@ -4,6 +4,13 @@ interface BulletProps {
     gl: WebGLRenderingContext
 }
 
+interface ApplyBufferDataProps {
+    flatX: number;
+    flatEndX: number;
+    flatY: number;
+    flatH: number;
+}
+
 /**
  * 子弹
  */
@@ -26,18 +33,13 @@ class Bullet {
         this.bufferId = this.gl.createBuffer()!;
 
         this.vx = 0;
-        this.vy = 0;
+        this.vy = -0.01;
         this.position = {
             x: 0.0,
             y: 0.0
         }
         this.dataArr = [this.position.x, this.position.y, 1.0, 1.0, 1.0]
         this.isMove = false;
-        this.init();
-    }
-
-    init() {
-        this.applyBufferData();
     }
 
     initProgram() {
@@ -64,7 +66,8 @@ class Bullet {
         return initShaders(this.gl, VSHADER_SOURCE, FSHADER_SOURCE)
     }
 
-    applyBufferData() {
+    applyBufferData({ flatX, flatEndX, flatY, flatH }: ApplyBufferDataProps) {
+        this.gl.useProgram(this.program)
         // BYTES_PER_ELEMENT属性代表了强类型数组中每个元素所占用的字节数
         const FSIZE = new Float32Array(this.dataArr).BYTES_PER_ELEMENT;
         this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.bufferId);
@@ -79,8 +82,18 @@ class Bullet {
         this.gl.enableVertexAttribArray(a_Color);
 
         const { x, y } = this.position;
-        let Tx = x;    //x坐标的位置
-        let Ty = y;    //y坐标的位置
+
+        if ((x > flatX && x < flatEndX && y >= flatY && Math.abs(y - flatY) <= flatH) || y >= 1) {
+            this.vy *= -1
+        }
+
+        this.position = {
+            x: x + this.vx,
+            y: y + this.vy
+        }
+        // console.log(this.position.y)
+        let Tx = this.position.x;    //x坐标的位置
+        let Ty = this.position.y;    //y坐标的位置
         let Tz = 0.0;    //z坐标的位置
         let Tw = 1.0;    //差值
         const mat = new Float32Array([
@@ -91,10 +104,18 @@ class Bullet {
         ]);
         const matLocation = this.gl!.getUniformLocation(this.program, 'mat');
         this.gl!.uniformMatrix4fv(matLocation, false, mat);
-        this.draw()
     }
 
-    draw() {
+    isBeyondBoundaryY() {
+        const { y } = this.position
+        return Math.abs(y) > 1;
+    }
+    // startX +flatX.current,startX + FLATDATA.width,-0.89,0.01
+    draw({ flatX, flatEndX, flatY, flatH }: ApplyBufferDataProps) {
+        this.applyBufferData({ flatX, flatEndX, flatY, flatH });
+        if (this.isBeyondBoundaryY()) {
+            return;
+        }
         this.gl.drawArrays(this.gl.POINTS, 0, 1)
     }
 

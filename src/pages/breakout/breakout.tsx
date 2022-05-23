@@ -6,6 +6,9 @@ const FLATDATA = {
     initSpeed: 0.03,
     initHelpSpeed: 0.01,
     width: 0.2,
+    height: 0.01,
+    startX: -0.1,
+    startY: -0.89
 }
 
 function Breakout() {
@@ -19,17 +22,17 @@ function Breakout() {
     let flatHelpSpeed = useRef<number>(FLATDATA.initHelpSpeed);
     // 平板的x轴距离
     let flatX = useRef<number>(0);
-    const startX = -0.1;
+
     // 平板的长方形数据
     const flatDataArr = useRef<number[]>([
-        // 左下角
-        startX, -0.9, 1.0, 0.0, 1.0, 3.0,
         // 左上角
-        startX, -0.89, 1.0, 0.0, 1.0, 3.0,
+        FLATDATA.startX, FLATDATA.startY, 1.0, 0.0, 1.0, 3.0,
+        // 左下角
+        FLATDATA.startX, FLATDATA.startY - FLATDATA.height, 1.0, 0.0, 1.0, 3.0,
         // 右上角
-        startX + FLATDATA.width, -0.89, 1.0, 0.0, 1.0, 3.0,
+        FLATDATA.startX + FLATDATA.width, FLATDATA.startY, 1.0, 0.0, 1.0, 3.0,
         // 右下角
-        startX + FLATDATA.width, -0.9, 1.0, 0.0, 1.0, 3.0,
+        FLATDATA.startX + FLATDATA.width, FLATDATA.startY - FLATDATA.height, 1.0, 0.0, 1.0, 3.0,
     ]).current
     const bullet = useRef<Bullet>();
 
@@ -86,6 +89,7 @@ function Breakout() {
             console.log('获取webgl绘图上下文失败');
             return;
         }
+        bullet.current = new Bullet({ gl })
         setGl(gl);
         // 顶点着色器
         const VSHADER_SOURCE = `
@@ -174,10 +178,9 @@ function Breakout() {
         gl.clearColor(0.0, 0.0, 0.0, 1.0);
         // 清空canvas
         gl.clear(gl.COLOR_BUFFER_BIT);
-
-        bullet.current = new Bullet({ gl })
-
+        gl.useProgram(program)
         applyBufferData();
+        bullet.current!.draw({ flatX: FLATDATA.startX + flatX.current, flatEndX: FLATDATA.startX + FLATDATA.width, flatY:FLATDATA.startY, flatH: FLATDATA.height })
         requestAnimationFrame(render)
     }
 
