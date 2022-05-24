@@ -8,7 +8,7 @@ const Breakout = React.lazy(() => import("@/pages/breakout/breakout"));
 const routeConfig = [
     {
         path: '/',
-        component: Breakout,
+        component: App,
     },
     {
         path: '/particleEffects',

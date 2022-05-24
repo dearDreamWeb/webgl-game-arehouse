@@ -1,4 +1,4 @@
-import { initShaders, rand, normalization } from '@/utils/common'
+import { initShaders, rand, normalization, Vector2d } from '@/utils/common'
 
 interface BulletProps {
     gl: WebGLRenderingContext
@@ -40,8 +40,8 @@ class Bullet {
             flatH: 0,
         }
 
-        this.vx = 0.02;
-        this.vy = -0.01;
+        this.vx = 0.006;
+        this.vy = -0.009;
         this.position = {
             x: 0.0,
             y: 0.0
@@ -118,10 +118,14 @@ class Bullet {
     }
 
     beyondBoundary() {
-        const { x, y } = this.position;
+        const bulletRadius = 8 / (window.innerWidth / 2)
+        let { x, y } = this.position;
         const { flatX, flatEndX, flatY, flatH } = this.flatData;
+        if (y < flatY) {
+            return
+        }
 
-        if ((x > flatX && x < flatEndX && y < 0 && y >= flatY && Number((Math.abs(y - flatY)).toFixed(2)) <= flatH) || y >= 1) {
+        if ((x + bulletRadius > flatX && x < flatEndX && y < 0 && y >= flatY && Number((Math.abs(y - flatY)).toFixed(2)) <= flatH) || y >= 1) {
             this.vy *= -1
         }
 

@@ -1,3 +1,5 @@
+import Vector2d from './vector2d'
+
 /**
  * 判断着色器是否编译连接成功
  * @param {*} gl webgl上下文
@@ -73,3 +75,5 @@ export function normalization({ x, y }: { x: number; y: number }) {
         y: -(y - domY - height / 2) / (height / 2)
     }
 }
+
+export { Vector2d }

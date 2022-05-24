@@ -226,7 +226,7 @@ function App() {
     const wallD = 10;
     const geometry = new BoxGeometry(wallW, wallH, wallD);
     const textureLoader = new TextureLoader()
-    textureLoader.load('/images/stone.png', (texture) => {
+    textureLoader.load('https://cdn2.mihuiai.com/webglStone.png', (texture) => {
       const material = new MeshLambertMaterial({
         map: texture,//设置颜色贴图属性值
         side: DoubleSide,
@@ -241,7 +241,7 @@ function App() {
 
     // 加载文字
     const loader = new FontLoader();
-    loader.load('/fonts/BiaoTiMinChoS_Regular.json', function (font) {
+    loader.load('https://cdn2.mihuiai.com/BiaoTiMinChoS_Regular.json', function (font) {
       let arr: Array<Mesh<TextGeometry, MeshLambertMaterial>> = [];
       linkData.forEach((item, index) => {
         const geometry = new TextGeometry(item.text, {
@@ -273,7 +273,7 @@ function App() {
   const initFloor = () => {
     const geometry = new PlaneGeometry(600, 600);
     const textureLoader = new TextureLoader()
-    textureLoader.load('/images/floor.png', (texture) => {
+    textureLoader.load('https://cdn2.mihuiai.com/webglFloor.png', (texture) => {
       const material = new MeshLambertMaterial({
         map: texture,//设置颜色贴图属性值
         side: DoubleSide,

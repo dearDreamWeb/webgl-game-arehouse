@@ -64,11 +64,11 @@ function Breakout() {
      * 平板的边界检测
      */
     const flatBoundaryCheck = () => {
-        const minX = -1.0 + FLATDATA.width / 2;
-        const maxX = 1.0 - FLATDATA.width / 2;
-        if (flatX.current <= minX) {
+        const minX = -1.0 - FLATDATA.startX;
+        const maxX = 1.0 - FLATDATA.startX - FLATDATA.width;
+        if (FLATDATA.startX + flatX.current <= minX) {
             flatX.current = minX
-        } else if (flatX.current >= maxX) {
+        } else if (flatX.current + FLATDATA.startX >= maxX) {
             flatX.current = maxX
         }
     }
@@ -180,7 +180,7 @@ function Breakout() {
         gl.clear(gl.COLOR_BUFFER_BIT);
         gl.useProgram(program)
         applyBufferData();
-        bullet.current!.draw({ flatX: FLATDATA.startX + flatX.current, flatEndX: FLATDATA.startX+ flatX.current + FLATDATA.width, flatY:FLATDATA.startY, flatH: FLATDATA.height })
+        bullet.current!.draw({ flatX: FLATDATA.startX + flatX.current, flatEndX: FLATDATA.startX + flatX.current + FLATDATA.width, flatY: FLATDATA.startY, flatH: FLATDATA.height })
         requestAnimationFrame(render)
     }
 
