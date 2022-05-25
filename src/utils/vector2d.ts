@@ -1,6 +1,6 @@
 export default class Vector2D extends Array {
     constructor(x = 0, y = 0) {
-        super();
+        super(x,y);
     }
 
     set x(v) {

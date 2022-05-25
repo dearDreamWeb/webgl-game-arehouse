@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { initShaders, rand, normalization } from '@/utils/common'
 import Bullet from './engine/bullet'
+import Rect from './engine/rect'
 
 const FLATDATA = {
     initSpeed: 0.1,
@@ -35,6 +36,7 @@ function Breakout() {
         FLATDATA.startX + FLATDATA.width, FLATDATA.startY, 1.0, 0.0, 1.0, 3.0,
     ]).current
     const bullet = useRef<Bullet>();
+    const rect = useRef<Rect>();
 
     useEffect(() => {
         init();
@@ -90,6 +92,7 @@ function Breakout() {
             return;
         }
         bullet.current = new Bullet({ gl })
+        rect.current = new Rect(gl)
         setGl(gl);
         // 顶点着色器
         const VSHADER_SOURCE = `
@@ -181,6 +184,7 @@ function Breakout() {
         gl.useProgram(program)
         applyBufferData();
         bullet.current!.draw({ flatX: FLATDATA.startX + flatX.current, flatEndX: FLATDATA.startX + flatX.current + FLATDATA.width, flatY: FLATDATA.startY, flatH: FLATDATA.height })
+        rect.current!.draw({...bullet.current!.position});
         requestAnimationFrame(render)
     }
 
