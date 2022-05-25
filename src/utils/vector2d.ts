@@ -1,5 +1,6 @@
 export default class Vector2D extends Array {
     constructor(x = 0, y = 0) {
+        // @ts-ignore
         super(x,y);
     }
 
